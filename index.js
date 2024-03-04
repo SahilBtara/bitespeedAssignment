@@ -14,28 +14,29 @@ const dbPool = new pg.Pool({
   password: "root",
 });
 
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.render("index.ejs");
 });
 
 app.post("/identify", async (req, res) => {
+  console.log(req.body);
   try {
     const email = req.body.email;
-    const phoneNumber = req.body.phoneNumber;
+    const phoneNumber = req.body.phonenumber;
 
     // Acquire a connection from the pool
     const client = await dbPool.connect();
-
+    let response;
     try {
       // Perform database queries using the acquired connection
-      await dbQueries(client, email, phoneNumber);
+      response = await dbQueries(client, email, phoneNumber);
+      console.log(response);
+      res.send(response);
     } finally {
       client.release(); // Release the connection back to the pool
     }
-
-    res.redirect("/");
   } catch (error) {
     console.error("Error identifying user:", error);
     res.status(500).send("An error occurred while identifying user");
