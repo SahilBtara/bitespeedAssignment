@@ -26,6 +26,19 @@ app.post("/identify", async (req, res) => {
     const email = req.body.email;
     const phoneNumber = req.body.phonenumber;
 
+    if (
+      email == null ||
+      phoneNumber == null ||
+      email == "" ||
+      phoneNumber == ""
+    ) {
+      return res.status(400).send({
+        message: "You've entered invalid data",
+        description:
+          "Both email and phone number should be present and not empty in the request",
+      });
+    }
+
     // Acquire a connection from the pool
     const client = await dbPool.connect();
     let response;
