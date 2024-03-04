@@ -1,5 +1,5 @@
 export async function dbQueries(db, email, phoneNumber) {
-  db.connect();
+//   db.connect();
 
   try {
     // Make two DB calls one with email one with phone number
@@ -30,10 +30,10 @@ export async function dbQueries(db, email, phoneNumber) {
     // send response
     // Do something with emailQueryResult and phoneNumberQueryResult if needed
 
-    db.end(); // Call db.end() only after both queries are executed
+    // db.end(); // Call db.end() only after both queries are executed
   } catch (error) {
     console.error("Error executing queries:", error);
-    db.end(); // Make sure to end the connection even in case of an error
+    // db.end(); // Make sure to end the connection even in case of an error
   }
 }
 
