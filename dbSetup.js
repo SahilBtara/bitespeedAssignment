@@ -11,15 +11,15 @@ export async function dbQueries(db, email, phoneNumber) {
     console.log(queryResult);
     if (queryResult.length === 0) {
       let newRow = await createNew(db, email, phoneNumber, null, "primary");
-      return createResponse(newRow[0].id, [email], [phoneNumber], []);
+      return createResponse(db,newRow[0].id, [email], [phoneNumber], []);
     }
 
     var entryFoundWithEmail = queryResult.some((obj) => obj.email === email);
     var entryFoundWithNum = queryResult.some(
       (obj) => obj.phonenumber === phoneNumber
     );
+    var linkedId = searchId(queryResult);
     if (!entryFoundWithNum || !entryFoundWithEmail) {
-      var linkedId = searchId(queryResult);
       let newRow = await createNew(
         db,
         email,
@@ -37,6 +37,7 @@ export async function dbQueries(db, email, phoneNumber) {
         .map((obj) => obj.id);
       secondaryIdArray.push(newRow[0].id);
       return createResponse(
+        db,
         linkedId,
         emailsArray,
         phoneArray,
@@ -44,7 +45,51 @@ export async function dbQueries(db, email, phoneNumber) {
       );
     }
 
-  } catch (error) {
+    const primaryObjectWithEmail = queryResult.find(obj => obj.email === email && obj.linkprecedence === 'primary');
+    const createdatValueOfEmail = primaryObjectWithEmail ? primaryObjectWithEmail.createdat : null;
+
+    const primaryObjectWithNumber = queryResult.find(obj => obj.phonenumber === phoneNumber && obj.linkprecedence === 'primary');
+    const createdatValueOfNumber = primaryObjectWithNumber ? primaryObjectWithNumber.createdat : null;
+
+    if(createdatValueOfEmail !== null && createdatValueOfNumber !== null){
+      const createdAt1 = new Date(createdatValueOfEmail);
+      const createdAt2 = new Date(createdatValueOfNumber);
+      if(createdAt1 > createdAt2)  {
+        let updatedRow = await updateQueryWithEmail(db, email, primaryObjectWithNumber.id);
+        console.log("updated row is",updatedRow);
+        const emailsArray = queryResult.map((obj) => obj.email);
+        const phoneArray = queryResult.map((obj) => obj.phonenumber);
+        const secondaryIdArray = queryResult
+        .filter((obj) => obj.linkprecedence === "secondary")
+        .map((obj) => obj.id);
+        secondaryIdArray.push(updatedRow[0].id);
+        return createResponse(
+          db,
+          linkedId,
+          emailsArray,
+          phoneArray,
+          secondaryIdArray
+      );
+      }else{
+        let updatedRow = await updateQueryWithNumber(db, phoneNumber,primaryObjectWithEmail.id);
+        console.log("updated row is",updatedRow);
+        const emailsArray = queryResult.map((obj) => obj.email);
+        const phoneArray = queryResult.map((obj) => obj.phonenumber);
+        const secondaryIdArray = queryResult
+        .filter((obj) => obj.linkprecedence === "secondary")
+        .map((obj) => obj.id);
+        secondaryIdArray.push(updatedRow[0].id);
+        return createResponse(
+          db,
+          linkedId,
+          emailsArray,
+          phoneArray,
+          secondaryIdArray
+        );
+      }
+    }
+
+  } catch (error) { 
     console.error("Error executing queries:", error);
   }
 }
@@ -70,27 +115,56 @@ async function queryByEmailAndPhoneNumber(db, email, phoneNumber) {
   });
 }
 
-function findPrimaryId(queryResult) {
-  queryResult.forEach((element) => {
-    console.log(typeof element.linkprecedence);
-    if (element.linkprecedence === "primary") {
-      return element.id;
-    }
+async function updateQueryWithEmail(db, email, linkedId){
+  return new Promise ((resolve, reject) => {
+    db.query(
+      "UPDATE contacts SET linkPrecedence = 'secondary', updatedAt = $2, linkedid = $3 WHERE email = $1 AND linkPrecedence = 'primary'  RETURNING *",
+      [email, new Date(), linkedId],
+      (err, res) => {
+        if (err) {
+          console.log("Error executing the query with email:", err.stack);
+          reject(err);
+        } else {
+          const data = res.rows;
+          resolve(data);
+        }
+      }
+    );
   });
-  return -1;
 }
 
-function createResponse(
+async function updateQueryWithNumber(db, number ,linkedId){
+  return new Promise ((resolve, reject) => {
+    db.query(
+      "UPDATE contacts SET linkPrecedence = 'secondary', updatedAt = $2, linkedid = $3 WHERE phoneNumber = $1 AND linkPrecedence = 'primary' RETURNING *",
+      [number, new Date(), linkedId],
+      (err, res) => {
+        if (err) {
+          console.log("Error executing the query with number:", err.stack);
+          reject(err);
+        } else {
+          const data = res.rows;
+          resolve(data);
+        }
+      }
+    );
+  });
+}
+
+async function createResponse(
+  db,
   primaryContactID,
   emails,
   phoneNumbers,
   secondaryContactId
 ) {
+  let resultById = await queryByLinkedId(db,primaryContactID);
+  console.log("****resultById***"  ,resultById);
   let response = {
     contact: {
       primaryContactId: primaryContactID,
-      emails: emails,
-      phoneNumbers: phoneNumbers,
+      emails: [...new Set(emails)],
+      phoneNumbers: [...new Set(phoneNumbers)],
       secondaryContactId: secondaryContactId,
     },
   };
@@ -125,10 +199,38 @@ function searchId(queryResult) {
     (obj) => obj.linkprecedence === "primary"
   );
 
+  const objWithPrimaryLinkId = queryResult.find(
+    (obj) => obj.linkedid !== null
+  );
+
   if (objWithPrimaryLinkPrecedence) {
     console.log(objWithPrimaryLinkPrecedence.id);
     return objWithPrimaryLinkPrecedence.id;
-  } else {
+  } else if(objWithPrimaryLinkId){
+    console.log(objWithPrimaryLinkId.linkedid);
+    return objWithPrimaryLinkId.linkedid;
+  } else{
     console.log('No object with linkprecedence "primary" found.');
   }
+}
+
+async function queryByLinkedId(db, linkedId) {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "SELECT * FROM contacts WHERE linkedid = $1 OR id = $1",
+      [linkedId],
+      (err, res) => {
+        if (err) {
+          console.log(
+            "Error executing the query by phone number and email",
+            err.stack
+          );
+          reject(err);
+        } else {
+          const data = res.rows;
+          resolve(data);
+        }
+      }
+    );
+  });
 }

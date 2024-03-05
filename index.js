@@ -8,10 +8,10 @@ const port = 3000;
 
 const dbPool = new pg.Pool({
   user: "postgres",
-  database: "bitespeed",
+  database: "quizapplicationyt",
   port: 5432,
   host: "localhost",
-  password: "root",
+  password: "rishab123",
 });
 
 app.use(express.json());
