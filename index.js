@@ -7,10 +7,10 @@ const app = express();
 const port = 3000;
 
 const dbPool = new pg.Pool({
-  user: "bitespeeduser",
-  database: "bitespeed_moen",
+  user: process.env.DB_USER,
+  database: process.env.DB_NAME,
   port: 5432,
-  host: "dpg-cnjfe9ev3ddc738c41og-a",
+  host: process.env.DB_HOST,
   password: process.env.DB_PASSWORD,
 });
 
