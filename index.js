@@ -11,7 +11,7 @@ const dbPool = new pg.Pool({
   database: "bitespeed_moen",
   port: 5432,
   host: "dpg-cnjfe9ev3ddc738c41og-a",
-  password: "Spc7QkBgArkWwFEt0xDFJseN36gCuoC8",
+  password: process.env.DB_PASSWORD,
 });
 
 app.use(express.json());
