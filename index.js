@@ -8,10 +8,10 @@ const port = 3000;
 
 const dbPool = new pg.Pool({
   user: "postgres",
-  database: "bitespeed",
+  database: "quizapplicationyt",
   port: 5432,
   host: "localhost",
-  password: "root",
+  password: "rishab123",
 });
 
 app.use(express.json());
@@ -21,7 +21,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/identify", async (req, res) => {
-  console.log(req.body);
+//  console.log(req.body);
   try {
     const email = req.body.email;
     const phoneNumber = req.body.phonenumber;
@@ -45,7 +45,7 @@ app.post("/identify", async (req, res) => {
     try {
       // Perform database queries using the acquired connection
       response = await dbQueries(client, email, phoneNumber);
-      console.log(response);
+   //   console.log(response);
       res.send(response);
     } finally {
       client.release(); // Release the connection back to the pool
