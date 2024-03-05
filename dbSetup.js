@@ -8,10 +8,10 @@ export async function dbQueries(db, email, phoneNumber) {
       email,
       phoneNumber
     );
-    console.log(queryResult);
+    console.log("queryResult is ",queryResult);
     if (queryResult.length === 0) {
       let newRow = await createNew(db, email, phoneNumber, null, "primary");
-      return createResponse(db,newRow[0].id, [email], [phoneNumber], []);
+      return createResponse(db,newRow[0].id);
     }
 
     var entryFoundWithEmail = queryResult.some((obj) => obj.email === email);
@@ -19,6 +19,7 @@ export async function dbQueries(db, email, phoneNumber) {
       (obj) => obj.phonenumber === phoneNumber
     );
     var linkedId = searchId(queryResult);
+    console.log("linkedId is ",linkedId);
     if (!entryFoundWithNum || !entryFoundWithEmail) {
       let newRow = await createNew(
         db,
@@ -38,10 +39,7 @@ export async function dbQueries(db, email, phoneNumber) {
       secondaryIdArray.push(newRow[0].id);
       return createResponse(
         db,
-        linkedId,
-        emailsArray,
-        phoneArray,
-        secondaryIdArray
+        linkedId
       );
     }
 
@@ -56,7 +54,7 @@ export async function dbQueries(db, email, phoneNumber) {
       const createdAt2 = new Date(createdatValueOfNumber);
       if(createdAt1 > createdAt2)  {
         let updatedRow = await updateQueryWithEmail(db, email, primaryObjectWithNumber.id);
-        console.log("updated row is",updatedRow);
+        console.log("updated row is 1",updatedRow);
         const emailsArray = queryResult.map((obj) => obj.email);
         const phoneArray = queryResult.map((obj) => obj.phonenumber);
         const secondaryIdArray = queryResult
@@ -65,14 +63,11 @@ export async function dbQueries(db, email, phoneNumber) {
         secondaryIdArray.push(updatedRow[0].id);
         return createResponse(
           db,
-          linkedId,
-          emailsArray,
-          phoneArray,
-          secondaryIdArray
+          linkedId
       );
       }else{
         let updatedRow = await updateQueryWithNumber(db, phoneNumber,primaryObjectWithEmail.id);
-        console.log("updated row is",updatedRow);
+        console.log("updated row is 2",updatedRow);
         const emailsArray = queryResult.map((obj) => obj.email);
         const phoneArray = queryResult.map((obj) => obj.phonenumber);
         const secondaryIdArray = queryResult
@@ -81,13 +76,15 @@ export async function dbQueries(db, email, phoneNumber) {
         secondaryIdArray.push(updatedRow[0].id);
         return createResponse(
           db,
-          linkedId,
-          emailsArray,
-          phoneArray,
-          secondaryIdArray
+          linkedId
         );
       }
     }
+
+    return createResponse(
+      db,
+      linkedId
+    );
 
   } catch (error) { 
     console.error("Error executing queries:", error);
@@ -153,13 +150,15 @@ async function updateQueryWithNumber(db, number ,linkedId){
 
 async function createResponse(
   db,
-  primaryContactID,
-  emails,
-  phoneNumbers,
-  secondaryContactId
+  primaryContactID
 ) {
   let resultById = await queryByLinkedId(db,primaryContactID);
   console.log("****resultById***"  ,resultById);
+  let emails = resultById.filter(obj => obj.id===primaryContactID).map(obj => obj.email);
+  emails.push(... resultById.filter(obj => obj.linkedid===primaryContactID).map(obj => obj.email));
+  let phoneNumbers = resultById.filter(obj => obj.id===primaryContactID).map(obj => obj.phonenumber);
+  phoneNumbers.push(... resultById.filter(obj => obj.linkedid===primaryContactID).map(obj => obj.phonenumber));
+  let secondaryContactId = resultById.filter(obj => obj.linkedid === primaryContactID).map(obj => obj.id);
   let response = {
     contact: {
       primaryContactId: primaryContactID,
@@ -204,10 +203,10 @@ function searchId(queryResult) {
   );
 
   if (objWithPrimaryLinkPrecedence) {
-    console.log(objWithPrimaryLinkPrecedence.id);
+    console.log("objWithPrimaryLinkPrecedence " ,objWithPrimaryLinkPrecedence.id);
     return objWithPrimaryLinkPrecedence.id;
   } else if(objWithPrimaryLinkId){
-    console.log(objWithPrimaryLinkId.linkedid);
+    console.log("objWithPrimaryLinkId ",objWithPrimaryLinkId.linkedid);
     return objWithPrimaryLinkId.linkedid;
   } else{
     console.log('No object with linkprecedence "primary" found.');
