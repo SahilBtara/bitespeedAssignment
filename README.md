@@ -1,5 +1,7 @@
 ***Published the endpoint on https://bitespeedassignment-hzf3.onrender.com/identify***
 
+Tech Stack - Express, PLSQL, Javascript
+
 1. Onboarding a new contact
 
 Sample request
